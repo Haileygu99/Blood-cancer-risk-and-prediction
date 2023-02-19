@@ -1,0 +1,264 @@
+---
+title: "Train set imputation"
+output: html_document
+date: "2023-02-19"
+---
+
+```{r}
+# install and load the necessary packages 
+library(dplyr)
+library(mice)
+library(car)   #recode
+
+```
+
+```{r}
+# load the train_df data
+```
+
+
+```{r}
+length(colnames(train_df$eid))
+length(train_df$eid)
+length(unique(train_df$eid))
+```
+
+```{r}
+# Find eids that are not unique
+duplicate_eids <- names(table(train_df$eid))[table(train_df$eid) > 1]
+num_duplicates <- length(duplicate_eids)
+
+# Subset only the rows with unique eids
+train_df_unique <- train_df[!(train_df$eid %in% duplicate_eids),]
+```
+
+```{r}
+str(train_df_unique)
+```
+
+```{r}
+library(dplyr)
+
+# check for columns with missing values 
+missing_values_total <- colSums(is.na(train_df_unique))
+
+# Print the columns with missing values 
+print(missing_values_total)
+```
+
+```{r}
+subset_train_df <- train_df_unique[, c(3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25)]
+```
+
+```{r}
+imp <- mice(subset_train_df, m=2, maxit=2, method="pmm", printFlag = FALSE)
+```
+
+```{r}
+imp$predictorMatrix
+
+pred <- imp$predictorMatrix
+```
+
+```{r}
+imp <- mice(subset_train_df, m = 5, maxit = 5, method = "pmm", predictorMatrix = pred)
+
+imp <- complete(imp)
+```
+
+
+
+```{r}
+# check for columns with missing values in the first 50 columns 
+missing_values_total <- colSums(is.na(imp))
+
+# Print the columns with missing values 
+print(missing_values_total)
+```
+
+
+```{r}
+summary(subset_train_df)
+```
+
+
+```{r}
+summary(imp)
+```
+
+
+```{r}
+library(mice)
+summary(imp)
+```
+
+```{r}
+# Plot diagnostic plots for imputation models
+library(ggplot2)
+
+
+
+# Compute correlation matrices for original and imputed data
+cor_orig <- cor(subset_train_df, use = "complete.obs")
+cor_imp <- cor(imp, use = "complete.obs")
+
+# Compare the correlation matrices
+cor_diff <- cor_orig - cor_imp
+
+# Plot the difference matrix as a heatmap
+library(ggplot2)
+ggplot(reshape2::melt(cor_diff), aes(Var1, Var2, fill = value)) + 
+  geom_tile() +
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0) +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
+  ggtitle("Difference in Correlation Matrices")
+```
+
+
+
+```{r}
+library(ggplot2)
+library(gridExtra)
+
+ggplot(subset_train_df, aes(x = Age_recr.0.0)) +
+  geom_histogram() +
+  ggtitle("Distribution of Age") +
+  xlab("Age") +
+  ylab("Count")
+
+
+ggplot(imp, aes(x = Age_recr.0.0)) +
+  geom_histogram() +
+  ggtitle("Distribution of Age") +
+  xlab("Age") +
+  ylab("Count")
+
+```
+
+
+
+```{r}
+ggplot(subset_train_df, aes(x = Sex.0.0)) +
+  geom_histogram() +
+  ggtitle("Distribution of sex") +
+  xlab("Sex") +
+  ylab("Count")
+
+
+ggplot(imp, aes(x = Sex.0.0)) +
+  geom_histogram() +
+  ggtitle("Distribution of sex") +
+  xlab("Sex") +
+  ylab("Count")
+```
+
+
+
+```{r}
+ggplot(subset_train_df, aes(x = BMI.0.0)) +
+  geom_histogram() +
+  ggtitle("Distribution of BMI") +
+  xlab("BMI") +
+  ylab("Count")
+
+ggplot(imp, aes(x = BMI.0.0)) +
+  geom_histogram() +
+  ggtitle("Distribution of BMI") +
+  xlab("BMI") +
+  ylab("Count")
+```
+
+```{r}
+ggplot(subset_train_df, aes(x = Mood_swings.0.0)) +
+  geom_histogram() +
+  ggtitle("Distribution of mood swings") +
+  xlab("mood swings") +
+  ylab("Count")
+
+ggplot(imp, aes(x = Mood_swings.0.0)) +
+  geom_histogram() +
+  ggtitle("Distribution of mood swings") +
+  xlab("mood swings") +
+  ylab("Count")
+```
+
+
+```{r}
+ggplot(subset_train_df, aes(x = Smoking_status.0.0)) +
+  geom_histogram() +
+  ggtitle("Distribution of smoking status") +
+  xlab("smoking") +
+  ylab("Count")
+
+ggplot(imp, aes(x = Smoking_status.0.0)) +
+  geom_histogram() +
+  ggtitle("Distribution of smoking status") +
+  xlab("smoking") +
+  ylab("Count")
+```
+
+```{r}
+ggplot(subset_train_df, aes(x = Alc_drinker_status.0.0)) +
+  geom_histogram() +
+  ggtitle("Distribution of alcohol") +
+  xlab("alcohol") +
+  ylab("Count")
+
+ggplot(imp, aes(x = Alc_drinker_status.0.0)) +
+  geom_histogram() +
+  ggtitle("Distribution of alcohol") +
+  xlab("alcohol") +
+  ylab("Count")
+```
+
+```{r}
+ggplot(subset_train_df, aes(x = Lymphocyte_count.0.0)) +
+  geom_histogram() +
+  ggtitle("Distribution of lymphocyte count") +
+  xlab("lymphocyte count") +
+  ylab("Count")
+
+ggplot(imp, aes(x = Lymphocyte_count.0.0)) +
+  geom_histogram() +
+  ggtitle("Distribution of lymphocyte count") +
+  xlab("lymphocyte count") +
+  ylab("Count")
+```
+
+
+```{r}
+str(subset_train_df)
+```
+
+
+Now, I want to combine the columns i need into a single dataframe 
+```{r}
+train_imp_df <- cbind(train_df_unique[, 1:2], imp, train_df_unique[, 26:29])
+
+```
+
+
+double check
+```{r}
+# check for columns with missing values 
+missing_values_total <- colSums(is.na(train_imp_df))
+
+# Print the columns with missing values 
+print(missing_values_total)
+```
+
+
+
+```{r}
+write.csv(train_imp_df, "train_imp_df.csv")
+```
+
+
+
+
+
+
+
+
+
+
