@@ -1,0 +1,491 @@
+---
+title: "logistic regression on clustering"
+output: html_document
+date: "2023-04-03"
+---
+
+```{r}
+library(tidyverse)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+```
+
+```{r}
+# load the csv file 
+train_3k <- read_csv("train_df_3kmeans.csv")
+
+str(train_3k)
+```
+
+
+Univariate logistic regression on each cluster 
+
+1. logistic regression on cluster_kmeans_0 without adjusting for anything 
+```{r}
+model_0_unadjusted <- glm(cluster_kmeans_0 ~ Lymphocyte_count.0.0 + Monocyte_count.0.0 + Reti_count.0.0 + WBC_count.0.0 + RBC_count.0.0 + Hgb_conc.0.0 + Haematocrit_perc.0.0 + Platelet_count.0.0 + Basophil_count.0.0 + Eosinophil_count.0.0 + Neutrophil_count.0.0 + Immature_ret_fraction.0.0 + High_light_scatter_reti_count.0.0, train_3k, family = 'binomial')
+
+summary(model_0_unadjusted)
+```
+
+
+extract the coefficients and standard errors from the model fit summary 
+```{r}
+coefs_0_unadjusted <- coef(model_0_unadjusted)
+se_0_unadjusted <- sqrt(diag(vcov(model_0_unadjusted)))
+
+print(coefs_0_unadjusted)
+print(se_0_unadjusted)
+```
+
+
+calculate the ORs and CIs
+```{r}
+ors_0_unadjusted <- exp(coefs_0_unadjusted)
+ci_0_unadjusted <- exp(coefs_0_unadjusted - (1.96 * se_0_unadjusted))
+                       
+print(ors_0_unadjusted)
+print(ci_0_unadjusted)
+```
+
+
+```{r}
+or_df_0_unadjusted <- data.frame(predictor = names(coefs_0_unadjusted),
+                                 or = ors_0_unadjusted,
+                                 lower = ci_0_unadjusted,
+                                 upper = exp(coefs_0_unadjusted+(1.96 * se_0_unadjusted)))
+```
+
+```{r}
+print(or_df_0_unadjusted)
+```
+create a forest plot to visualize 
+```{r}
+ggplot(or_df_0_unadjusted, aes(y=predictor, x = or, xmin=lower, xmax = upper)) +
+  geom_pointrange()+
+  labs(x = "OR (95% CI)", y= "") +
+  geom_vline(xintercept = 1, linetype = "dashed", alpha = 0.5) +
+  theme_classic() +
+  annotate("text", x = .8, y = 6.4, label = "") + 
+  annotate("text", x = 1.2, y = 6.4, label = "") +
+  annotate("text", x = 2, y = 6.8, label = "") +
+  scale_x_continuous(limits = c(0, 3), breaks = seq(0, 3, by = 0.5))
+```
+univariate for k_0
+```{r}
+# Assuming your data is stored in a data frame called "train_3k"
+
+# Define the blood count variable names in a vector
+count_vars <- c("Lymphocyte_count.0.0", "Monocyte_count.0.0", "Reti_count.0.0", 
+                "WBC_count.0.0", "RBC_count.0.0", "Hgb_conc.0.0", 
+                "Haematocrit_perc.0.0", "Platelet_count.0.0", 
+                "Basophil_count.0.0", "Eosinophil_count.0.0", 
+                "Neutrophil_count.0.0", "Immature_ret_fraction.0.0", 
+                "High_light_scatter_reti_count.0.0")
+
+# Create an empty list to store the model objects
+model_list <- list()
+
+# Loop through the blood count variable names
+for (i in 1:length(count_vars)) {
+  
+  # Get the name of the current blood count variable
+  var_name <- count_vars[i]
+  
+  # Create the formula string for the current blood count variable
+  formula_str <- paste("cluster_kmeans_0 ~", var_name)
+  
+  # Fit the logistic regression model using the current blood count variable
+  model <- glm(formula_str, data = train_3k, family = "binomial")
+  
+  # Store the model object in the list
+  model_list[[i]] <- model
+  
+  # Print the summary of the model
+  print(summary(model))
+}
+```
+
+
+```{r}
+# Assuming your data is stored in a data frame called "train_3k"
+
+# Define the blood count variable names in a vector
+count_vars <- c("Lymphocyte_count.0.0", "Monocyte_count.0.0", "Reti_count.0.0", 
+                "WBC_count.0.0", "RBC_count.0.0", "Hgb_conc.0.0", 
+                "Haematocrit_perc.0.0", "Platelet_count.0.0", 
+                "Basophil_count.0.0", "Eosinophil_count.0.0", 
+                "Neutrophil_count.0.0", "Immature_ret_fraction.0.0", 
+                "High_light_scatter_reti_count.0.0")
+
+# Create an empty data frame to store the odds ratios
+odds_df <- data.frame(Blood_Count_Var = character(),
+                      Odds_Ratio = numeric(),
+                      Lower_CI = numeric(),
+                      Upper_CI = numeric(),
+                      stringsAsFactors = FALSE)
+
+# Loop through the blood count variable names
+for (i in 1:length(count_vars)) {
+  
+  # Get the name of the current blood count variable
+  var_name <- count_vars[i]
+  
+  # Create the formula string for the current blood count variable
+  formula_str <- paste("cluster_kmeans_0 ~", var_name)
+  
+  # Fit the logistic regression model using the current blood count variable
+  model <- glm(formula_str, data = train_3k, family = "binomial")
+  
+  # Extract the coefficient estimate and confidence intervals for the blood count variable
+  coef <- summary(model)$coefficients[2,]
+  
+  # Calculate the odds ratio and confidence intervals
+  odds_ratio <- exp(coef[1])
+  ci_lower <- exp(coef[1] - 1.96 * coef[2])
+  ci_upper <- exp(coef[1] + 1.96 * coef[2])
+  
+  # Add the odds ratio and confidence intervals to the data frame
+  odds_df <- rbind(odds_df, data.frame(Blood_Count_Var = var_name,
+                                        Odds_Ratio = odds_ratio,
+                                        Lower_CI = ci_lower,
+                                        Upper_CI = ci_upper,
+                                        stringsAsFactors = FALSE))
+}
+
+# Print the resulting data frame with the odds ratios
+print(odds_df)
+
+```
+
+cluster_1 
+```{r}
+model_1_unadjusted <- glm(cluster_kmeans_1 ~ Lymphocyte_count.0.0 + Monocyte_count.0.0 + Reti_count.0.0 + WBC_count.0.0 + RBC_count.0.0 + Hgb_conc.0.0 + Haematocrit_perc.0.0 + Platelet_count.0.0 + Basophil_count.0.0 + Eosinophil_count.0.0 + Neutrophil_count.0.0 + Immature_ret_fraction.0.0 + High_light_scatter_reti_count.0.0, train_3k, family = 'binomial')
+
+summary(model_1_unadjusted)
+
+
+coefs_1_unadjusted <- coef(model_1_unadjusted)
+se_1_unadjusted <- sqrt(diag(vcov(model_1_unadjusted)))
+
+print(coefs_1_unadjusted)
+print(se_1_unadjusted)
+
+
+ors_1_unadjusted <- exp(coefs_1_unadjusted)
+ci_1_unadjusted <- exp(coefs_1_unadjusted - (1.96 * se_1_unadjusted))
+                       
+print(ors_1_unadjusted)
+print(ci_1_unadjusted)
+
+
+or_df_1_unadjusted <- data.frame(predictor = names(coefs_1_unadjusted),
+                                 or = ors_1_unadjusted,
+                                 lower = ci_1_unadjusted,
+                                 upper = exp(coefs_1_unadjusted+(1.96 * se_1_unadjusted)))
+
+print(or_df_1_unadjusted)
+```
+
+```{r}
+ggplot(or_df_1_unadjusted, aes(y=predictor, x = or, xmin=lower, xmax = upper)) +
+  geom_pointrange()+
+  labs(x = "OR (95% CI)", y= "") +
+  geom_vline(xintercept = 1, linetype = "dashed", alpha = 0.5) +
+  theme_classic() +
+  annotate("text", x = .8, y = 6.4, label = "") + 
+  annotate("text", x = 1.2, y = 6.4, label = "") +
+  annotate("text", x = 2, y = 6.8, label = "") +
+  scale_x_continuous(limits = c(0, 3), breaks = seq(0, 3, by = 0.5))
+```
+
+
+
+```{r}
+# Assuming your data is stored in a data frame called "train_3k"
+
+# Define the blood count variable names in a vector
+count_vars <- c("Lymphocyte_count.0.0", "Monocyte_count.0.0", "Reti_count.0.0", 
+                "WBC_count.0.0", "RBC_count.0.0", "Hgb_conc.0.0", 
+                "Haematocrit_perc.0.0", "Platelet_count.0.0", 
+                "Basophil_count.0.0", "Eosinophil_count.0.0", 
+                "Neutrophil_count.0.0", "Immature_ret_fraction.0.0", 
+                "High_light_scatter_reti_count.0.0")
+
+# Create an empty list to store the model objects
+model_list <- list()
+
+# Loop through the blood count variable names
+for (i in 1:length(count_vars)) {
+  
+  # Get the name of the current blood count variable
+  var_name <- count_vars[i]
+  
+  # Create the formula string for the current blood count variable
+  formula_str <- paste("cluster_kmeans_1 ~", var_name)
+  
+  # Fit the logistic regression model using the current blood count variable
+  model <- glm(formula_str, data = train_3k, family = "binomial")
+  
+  # Store the model object in the list
+  model_list[[i]] <- model
+  
+  # Print the summary of the model
+  print(summary(model))
+}
+```
+
+
+```{r}
+# Assuming your data is stored in a data frame called "train_3k"
+
+# Define the blood count variable names in a vector
+count_vars <- c("Lymphocyte_count.0.0", "Monocyte_count.0.0", "Reti_count.0.0", 
+                "WBC_count.0.0", "RBC_count.0.0", "Hgb_conc.0.0", 
+                "Haematocrit_perc.0.0", "Platelet_count.0.0", 
+                "Basophil_count.0.0", "Eosinophil_count.0.0", 
+                "Neutrophil_count.0.0", "Immature_ret_fraction.0.0", 
+                "High_light_scatter_reti_count.0.0")
+
+# Create an empty data frame to store the odds ratios
+odds_df <- data.frame(Blood_Count_Var = character(),
+                      Odds_Ratio = numeric(),
+                      Lower_CI = numeric(),
+                      Upper_CI = numeric(),
+                      stringsAsFactors = FALSE)
+
+# Loop through the blood count variable names
+for (i in 1:length(count_vars)) {
+  
+  # Get the name of the current blood count variable
+  var_name <- count_vars[i]
+  
+  # Create the formula string for the current blood count variable
+  formula_str <- paste("cluster_kmeans_1 ~", var_name)
+  
+  # Fit the logistic regression model using the current blood count variable
+  model <- glm(formula_str, data = train_3k, family = "binomial")
+  
+  # Extract the coefficient estimate and confidence intervals for the blood count variable
+  coef <- summary(model)$coefficients[2,]
+  
+  # Calculate the odds ratio and confidence intervals
+  odds_ratio <- exp(coef[1])
+  ci_lower <- exp(coef[1] - 1.96 * coef[2])
+  ci_upper <- exp(coef[1] + 1.96 * coef[2])
+  
+  # Add the odds ratio and confidence intervals to the data frame
+  odds_df <- rbind(odds_df, data.frame(Blood_Count_Var = var_name,
+                                        Odds_Ratio = odds_ratio,
+                                        Lower_CI = ci_lower,
+                                        Upper_CI = ci_upper,
+                                        stringsAsFactors = FALSE))
+}
+
+# Print the resulting data frame with the odds ratios
+print(odds_df)
+
+```
+
+
+
+
+
+cluster 2 
+```{r}
+model_2_unadjusted <- glm(cluster_kmeans_2 ~ Lymphocyte_count.0.0 + Monocyte_count.0.0 + Reti_count.0.0 + WBC_count.0.0 + RBC_count.0.0 + Hgb_conc.0.0 + Haematocrit_perc.0.0 + Platelet_count.0.0 + Basophil_count.0.0 + Eosinophil_count.0.0 + Neutrophil_count.0.0 + Immature_ret_fraction.0.0 + High_light_scatter_reti_count.0.0, train_3k, family = 'binomial')
+
+summary(model_2_unadjusted)
+
+
+coefs_2_unadjusted <- coef(model_2_unadjusted)
+se_2_unadjusted <- sqrt(diag(vcov(model_2_unadjusted)))
+
+print(coefs_2_unadjusted)
+print(se_2_unadjusted)
+
+
+ors_2_unadjusted <- exp(coefs_2_unadjusted)
+ci_2_unadjusted <- exp(coefs_2_unadjusted - (1.96 * se_2_unadjusted))
+                       
+print(ors_2_unadjusted)
+print(ci_2_unadjusted)
+
+
+or_df_2_unadjusted <- data.frame(predictor = names(coefs_2_unadjusted),
+                                 or = ors_2_unadjusted,
+                                 lower = ci_2_unadjusted,
+                                 upper = exp(coefs_2_unadjusted+(1.96 * se_2_unadjusted)))
+
+print(or_df_2_unadjusted)
+```
+
+
+```{r}
+ggplot(or_df_2_unadjusted, aes(y=predictor, x = or, xmin=lower, xmax = upper)) +
+  geom_pointrange()+
+  labs(x = "OR (95% CI)", y= "") +
+  geom_vline(xintercept = 1, linetype = "dashed", alpha = 0.5) +
+  theme_classic() +
+  annotate("text", x = .8, y = 6.4, label = "") + 
+  annotate("text", x = 1.2, y = 6.4, label = "") +
+  annotate("text", x = 2, y = 6.8, label = "") +
+  scale_x_continuous(limits = c(0, 3), breaks = seq(0, 3, by = 0.5))
+```
+
+
+```{r}
+# Assuming your data is stored in a data frame called "train_3k"
+
+# Define the blood count variable names in a vector
+count_vars <- c("Lymphocyte_count.0.0", "Monocyte_count.0.0", "Reti_count.0.0", 
+                "WBC_count.0.0", "RBC_count.0.0", "Hgb_conc.0.0", 
+                "Haematocrit_perc.0.0", "Platelet_count.0.0", 
+                "Basophil_count.0.0", "Eosinophil_count.0.0", 
+                "Neutrophil_count.0.0", "Immature_ret_fraction.0.0", 
+                "High_light_scatter_reti_count.0.0")
+
+# Create an empty list to store the model objects
+model_list <- list()
+
+# Loop through the blood count variable names
+for (i in 1:length(count_vars)) {
+  
+  # Get the name of the current blood count variable
+  var_name <- count_vars[i]
+  
+  # Create the formula string for the current blood count variable
+  formula_str <- paste("cluster_kmeans_2 ~", var_name)
+  
+  # Fit the logistic regression model using the current blood count variable
+  model <- glm(formula_str, data = train_3k, family = "binomial")
+  
+  # Store the model object in the list
+  model_list[[i]] <- model
+  
+  # Print the summary of the model
+  print(summary(model))
+}
+```
+
+```{r}
+# Assuming your data is stored in a data frame called "train_3k"
+
+# Define the blood count variable names in a vector
+count_vars <- c("Lymphocyte_count.0.0", "Monocyte_count.0.0", "Reti_count.0.0", 
+                "WBC_count.0.0", "RBC_count.0.0", "Hgb_conc.0.0", 
+                "Haematocrit_perc.0.0", "Platelet_count.0.0", 
+                "Basophil_count.0.0", "Eosinophil_count.0.0", 
+                "Neutrophil_count.0.0", "Immature_ret_fraction.0.0", 
+                "High_light_scatter_reti_count.0.0")
+
+# Create an empty data frame to store the odds ratios
+odds_df <- data.frame(Blood_Count_Var = character(),
+                      Odds_Ratio = numeric(),
+                      Lower_CI = numeric(),
+                      Upper_CI = numeric(),
+                      stringsAsFactors = FALSE)
+
+# Loop through the blood count variable names
+for (i in 1:length(count_vars)) {
+  
+  # Get the name of the current blood count variable
+  var_name <- count_vars[i]
+  
+  # Create the formula string for the current blood count variable
+  formula_str <- paste("cluster_kmeans_2 ~", var_name)
+  
+  # Fit the logistic regression model using the current blood count variable
+  model <- glm(formula_str, data = train_3k, family = "binomial")
+  
+  # Extract the coefficient estimate and confidence intervals for the blood count variable
+  coef <- summary(model)$coefficients[2,]
+  
+  # Calculate the odds ratio and confidence intervals
+  odds_ratio <- exp(coef[1])
+  ci_lower <- exp(coef[1] - 1.96 * coef[2])
+  ci_upper <- exp(coef[1] + 1.96 * coef[2])
+  
+  # Add the odds ratio and confidence intervals to the data frame
+  odds_df <- rbind(odds_df, data.frame(Blood_Count_Var = var_name,
+                                        Odds_Ratio = odds_ratio,
+                                        Lower_CI = ci_lower,
+                                        Upper_CI = ci_upper,
+                                        stringsAsFactors = FALSE))
+}
+
+# Print the resulting data frame with the odds ratios
+print(odds_df)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+-----------------------------------------------------------`
+
+
+add the life styles in 
+```{r}
+model_0_life_count <- glm(cluster_kmeans_0 ~ Lymphocyte_count.0.0 + Monocyte_count.0.0 + Reti_count.0.0 + WBC_count.0.0 + RBC_count.0.0 + Hgb_conc.0.0 + Haematocrit_perc.0.0 + Platelet_count.0.0 + Basophil_count.0.0 + Eosinophil_count.0.0 + Neutrophil_count.0.0 + Immature_ret_fraction.0.0 + High_light_scatter_reti_count.0.0 + Traff_int_major_rd.0.0 + housing_score + Smoking_status.0.0_0 + Smoking_status.0.0_1 + Smoking_status.0.0_2 + Mood_swings.0.0_0 + Mood_swings.0.0_1 + Alc_drinker_status.0.0_0 + Alc_drinker_status.0.0_1 + Alc_drinker_status.0.0_2, train_3k, family = 'binomial')
+
+summary(model_0_life_count)
+```
+
+```{r}
+# Extract the coefficients and standard errors from the model fit summary 
+coefs_0_life_count <- coef(model_0_life_count)
+se_0_life_count <- sqrt(diag(vcov(model_0_life_count)))
+
+print(coefs_0_life_count)
+print(se_0_life_count)
+
+# calculate the ORs and CIs 
+ors_0_life_count <- exp(coefs_0_life_count)
+ci_0_life_count <- exp(coefs_0_life_count -(1.96 * se_0_life_count))
+
+print(ors_0_life_count)
+print(ci_0_life_count)
+
+or_df_0_life_count <- data.frame(predictor = names(coefs_0_life_count),
+                    or = ors_0_life_count,
+                    lower = ci_0_life_count,
+                    upper = exp(coefs_0_life_count + (1.96 * se_0_life_count)))
+
+```
+
+
+```{r}
+# create a forest plot 
+ggplot(or_df_0_life_count, aes(y = predictor, x = or, xmin = lower, xmax = upper)) +
+  geom_pointrange() +
+  labs(x = "OR (95% CI)", y = "") + 
+  geom_vline(xintercept = 1, linetype = "dashed", alpha = 0.5) +
+  theme_classic() +
+  annotate("text", x = .8, y = 6.4, label = "") + 
+  annotate("text", x = 1.2, y = 6.4, label = "") +
+  annotate("text", x = 2, y = 6.8, label = "") +
+  scale_x_continuous(limits = c(0, 3), breaks = seq(0, 3, by = 0.5))
+```
+
+
+
+
+
+
+
+
+
+
