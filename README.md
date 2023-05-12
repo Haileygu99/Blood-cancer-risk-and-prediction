@@ -28,8 +28,3 @@ Possible approaches:
 <img width="648" alt="Screenshot 2023-02-19 at 10 01 02 PM" src="https://user-images.githubusercontent.com/111628669/219977741-8ae477e1-973a-4af8-bbf7-0b99954e5ba3.png">
 
 Dataset used: UK Biobank dataset
-- To access the dataset, you will need to register an account on the UK Biobank website 
-(https://www.ukbiobank.ac.uk/register-apply/)
-- Complete the online application form and wait for approval before being granted access to the data
-
-This is an ongoing project...
