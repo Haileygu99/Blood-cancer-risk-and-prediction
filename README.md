@@ -25,8 +25,8 @@ Possible approaches:
 - Machine learning: blood cancer prediction using blood phenotypes
 
 Folders:
-- Pre-processing scripts are in matching and imputation folders
-- Final models contains the final random forest, logistic regression and clustering scripts
+- Pre-processing scripts are in 'Matching' and 'imputation' folders
+- 'Final_models' contains the final random forest, logistic regression and clustering scripts
 - Cluster characteristics are described in 'clustering' and 'cluster_descriptives' folders
 
 <img width="648" alt="Screenshot 2023-02-19 at 10 01 02 PM" src="https://user-images.githubusercontent.com/111628669/219977741-8ae477e1-973a-4af8-bbf7-0b99954e5ba3.png">
